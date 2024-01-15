@@ -3,6 +3,19 @@ using System.Text.Json.Serialization;
 
 namespace TriviaAPI.Model
 {
+    public class Catgory
+    {
+		[JsonPropertyName("trivia_categories")]
+		public Category[] Categories { get; set; }
+    }
+    
+    public class Category
+    {
+		[JsonPropertyName("id")]
+        public int Id { get; set; }
+        [JsonPropertyName("name")]
+        public string Name { get; set; }    
+	}
     public class API
     {
         [JsonPropertyName("response_code")]
