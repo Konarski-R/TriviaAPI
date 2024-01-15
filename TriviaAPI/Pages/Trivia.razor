@@ -1,0 +1,223 @@
+﻿@page "/"
+@using Model
+@using System;
+@using System.Text;
+@using System.Collections.Generic;
+
+<style>
+	.custom-gy-1 {
+		margin-bottom: 0.5rem; /* Adjust the value as needed */
+	}
+</style>
+
+<PageTitle>Trivia</PageTitle>
+
+<h3>Trivia</h3>
+@if (Form == 0)
+{
+	<div class="input-group mb-3">
+		<select class="form-select" @bind="difficultySelect" aria-label="Difficulty">
+			<option selected>Choose a Difficulty</option>
+			<option value="easy">easy</option>
+			<option value="medium">medium</option>
+			<option value="hard">hard</option>
+			<option value="mixed">mix</option>
+		</select>
+		<select class="form-select" @bind="categorySelect" aria-label="Category">
+			<option selected>Choose a Category</option>
+			<option value="0">Mix</option>
+			<option value="9">General Knowledge</option>
+			<option value="10">Entertainment: Books</option>
+			<option value="11">Entertainment: Film</option>
+			<option value="12">Entertainment: Music</option>
+			<option value="13">Entertainment: Musicals & Theatres</option>
+			<option value="14">Entertainment: Television</option>
+			<option value="15">Entertainment: Video Games</option>
+			<option value="16">Entertainment: Board Games</option>
+			<option value="29">Entertainment: Comics</option>
+			<option value="31">Entertainment: Japanese Anime & Manga</option>
+			<option value="32">Entertainment: Cartoon & Animations</option>
+			<option value="17">Science & Nature</option>
+			<option value="18">Science: Computers</option>
+			<option value="19">Science: Mathematics</option>
+			<option value="30">Science: Gadgets</option>
+			<option value="20">Mythology</option>
+			<option value="21">Sports</option>
+			<option value="22">Geography</option>
+			<option value="23">History</option>
+			<option value="24">Politics</option>
+			<option value="25">Art</option>
+			<option value="26">Celebrities</option>
+			<option value="27">Animals</option>
+			<option value="28">Vehicles</option>	
+		</select>
+		<input @bind="amount" type="text" aria-label="Amount" placeholder="Amount of Questions: Recommended: 15/max: 50" class="form-control form-control-sm">
+		<button class="btn btn-outline-primary" type="button" id="button-addon2" @onclick="Generate" >Generate questions</button>
+	</div>
+}
+@if (Form == 1)
+{
+	@if (generated)
+	{
+		@if (Results is not null)
+		{
+			@foreach (var result in Results.Results)
+			{
+				List<string> Answers = new List<string>(result.IncorrAnswers);
+				Answers.Add(result.CorrAnswer);
+
+				Shuff.Shuffle(Answers);
+
+				<h6>@System.Net.WebUtility.HtmlDecode(result.Category) @System.Net.WebUtility.HtmlDecode(result.Difficulty)</h6>
+				<h5>@System.Net.WebUtility.HtmlDecode(result.Question)</h5>
+				@if (@result.Type == "boolean")
+				{
+					<div class="container text-left">
+						<div class="row custom-gy-1">
+							<div class="col-auto">
+								<label for="checkTrue">True</label>
+								<input type="checkbox" value="true" aria-label="True" id="checkTrue" disabled="@AnswersShown">
+								<label for="checkFalse">False</label>
+								<input type="checkbox" value="false" aria-label="False" id="checkFalse" disabled="@AnswersShown">
+							</div>
+						</div>
+						<div class="row custom-gy-1">
+							<div class="col-auto">
+								<h6>Correct Answer: @System.Net.WebUtility.HtmlDecode(result.CorrAnswer)</h6>
+							</div>
+						</div>
+					</div>
+				}
+				else
+				{
+					<div class="container text-left">
+						@foreach (string answer in Answers)
+						{
+							<div class="row custom-gy-1">
+								<div class="col-auto">
+									<h6>@System.Net.WebUtility.HtmlDecode(answer)</h6>
+								</div>
+								<div class="col-auto">
+									<input type="checkbox" value="@System.Net.WebUtility.HtmlDecode(answer)" aria-label="True" id="Check" disabled="@AnswersShown">
+								</div>
+							</div>
+						}
+						@if (AnswersShown)
+						{
+							<div class="row custom-gy-1">
+								<div class="col-auto">
+									<h6 style="color: green">Correct Answer: @System.Net.WebUtility.HtmlDecode(result.CorrAnswer)</h6>
+								</div>
+							</div>
+						}
+					</div>
+				}
+			}
+		}
+		else
+		{
+			<p>an error has occured</p>
+		}
+
+		<button class="btn btn-outline-success" type="button" id="button-addon2" @onclick="ToggleAnswers">Show answers</button>
+		<button class="btn btn-outline-danger" type="button" id="button-addon2" @onclick="Return">Return to generate questions</button>
+		<p></p>
+		<p></p>
+	}
+}
+
+@code {
+	public int Form = 0;
+
+	Token? Toke;
+	API? Results;
+
+	public static Random rng = new Random();
+
+	public class Shuff
+	{
+		public static void Shuffle<T>(IList<T> list)
+		{
+			int n = list.Count;
+			while (n > 1)
+			{
+				n--;
+				int k = rng.Next(n + 1);
+				T value = list[k];
+				list[k] = list[n];
+				list[n] = value;
+			}
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		await base.OnInitializedAsync();
+
+		HttpClient token = new();
+		token.BaseAddress = new Uri("https://opentdb.com");
+
+		HttpResponseMessage Tresponse = await token.GetAsync(requestUri: "/api_token.php?command=request");
+
+		if (Tresponse.IsSuccessStatusCode)
+		{
+			Toke = await Tresponse.Content.ReadFromJsonAsync<Token>();
+		}
+	}
+	public string difficultySelect { get; set; }
+	public string categorySelect { get; set; }
+	public string amount { get; set; }
+	public bool generated = false;
+
+	private async Task Generate()
+	{
+		Form = 1;
+		AnswersShown = false;
+
+		HttpClient client = new();
+		client.BaseAddress = new Uri("https://opentdb.com");
+
+		string difficulty = difficultySelect.ToString();
+		string category = categorySelect.ToString();
+		string Qamount = amount.ToString();
+		string requestUri;
+		if (difficulty != "mixed" && category != "Mix")
+		{
+			requestUri = $"/api.php?amount={Qamount}&category={category}&difficulty={difficulty}&token={Toke?.Toke}";
+		}
+		else if (difficulty != "mixed" && category == "Mix")
+		{
+			requestUri = $"/api.php?amount={Qamount}&difficulty={difficulty}&token={Toke?.Toke}";
+		}
+		else if (difficulty == "mixed" && category != "Mix")
+		{
+			requestUri = $"/api.php?amount={Qamount}&category={category}&token={Toke?.Toke}";
+		}
+		else
+		{
+			requestUri = $"/api.php?amount={Qamount}&token={Toke?.Toke}";
+		}
+
+
+		HttpResponseMessage response = await client.GetAsync(requestUri);
+
+		if (response.IsSuccessStatusCode)
+		{
+			Results = await response.Content.ReadFromJsonAsync<API>();
+		}
+
+		generated = true;
+	}
+
+	public bool AnswersShown { get; set; } = false;
+
+	private void ToggleAnswers()
+	{
+		AnswersShown = !AnswersShown;
+	}
+
+	private void Return()
+	{
+		Form = 0;
+	}
+}
