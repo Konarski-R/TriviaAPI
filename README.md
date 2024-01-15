@@ -1,1 +1,2 @@
 # TriviaAPI
+Mein Projekt ist eine Webseite in Welcher man nach einem Quiz fragen kann. welches dann ausgegeben wird und man lösen kann. Nachdem man das Quiz löst, kann man auf schow Answers drücken um zu kontrollieren ob man die Fragen Richtig beantwortet hat.
